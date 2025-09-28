@@ -1,12 +1,19 @@
-// src/pages/Login.jsx
 import { useState } from 'react';
 import { Form, Button, Card, Alert, Spinner } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 
-const RAW_API = process.env.REACT_APP_API_URL || '';
-// Limpia espacios y barra final para evitar //api/...
-const API_BASE = RAW_API.trim().replace(/\/+$/, '');
+// Base del API:
+// - Usa REACT_APP_API_URL si existe
+// - En producción, si está vacío, cae a tu backend en Render
+// - En desarrollo, si está vacío, cae a localhost:4000
+const RAW =
+  process.env.REACT_APP_API_URL ||
+  (process.env.NODE_ENV === 'production'
+    ? 'https://final-ecommerce-b.onrender.com'
+    : 'http://localhost:4000');
+
+const API_BASE = RAW.trim().replace(/\/+$/, '');
 const IS_DEV = process.env.NODE_ENV === 'development';
 
 const Login = () => {
@@ -36,34 +43,25 @@ const Login = () => {
         body: JSON.stringify({ email, password })
       });
 
-      // Intenta parsear respuesta (json o texto)
-      const contentType = res.headers.get('content-type') || '';
-      const payload = contentType.includes('application/json')
+      const ct = res.headers.get('content-type') || '';
+      const payload = ct.includes('application/json')
         ? await res.json().catch(() => ({}))
         : await res.text().catch(() => '');
 
-      if (res.ok && payload && payload.token && payload.user) {
-        // Éxito real: guardá token+user y a /account
+      if (res.ok && payload?.token && payload?.user) {
         login({ token: payload.token, user: payload.user });
         navigate('/account');
         return;
       }
 
-      // Error de API: muestra mensaje del server si viene
-      if (!res.ok) {
-        const serverMsg =
-          (payload && (payload.error || payload.message)) ||
-          `${res.status} ${res.statusText}` ||
-          'Credenciales inválidas.';
-        setErrorMsg(serverMsg);
-        return;
-      }
-
-      // Por si el server devolvió 200 pero sin {token,user}
-      setErrorMsg('Respuesta inesperada del servidor.');
+      const serverMsg =
+        (payload && (payload.error || payload.message)) ||
+        `${res.status} ${res.statusText}` ||
+        'Credenciales inválidas.';
+      setErrorMsg(serverMsg);
     } catch {
-      // Solo permitir “login mock” en dev para no trabar el flujo al maquetar
       if (IS_DEV) {
+        // fallback solo en dev para seguir maquetando sin backend
         login({ email });
         navigate('/account');
         return;

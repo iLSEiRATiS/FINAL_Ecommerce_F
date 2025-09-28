@@ -1,19 +1,15 @@
 // src/lib/api.js
-// Base saneada sin barras dobles
-const API_BASE = (process.env.REACT_APP_API_URL || 'http://localhost:4000')
-  .trim()
-  .replace(/\/+$/, '');
+const RAW =
+  process.env.REACT_APP_API_URL ||
+  (process.env.NODE_ENV === 'production'
+    ? 'https://final-ecommerce-b.onrender.com'
+    : 'http://localhost:4000');
 
-/**
- * apiFetch: wrapper fino con JSON y manejo de errores
- * Exportado para que puedas usarlo directo (Admin.jsx) o vía api.*
- */
+const API_BASE = RAW.trim().replace(/\/+$/, '');
+
 export async function apiFetch(path, { method = 'GET', body, token } = {}) {
   const url = `${API_BASE}${path}`;
-  const headers = {
-    Accept: 'application/json',
-    'Content-Type': 'application/json'
-  };
+  const headers = { Accept: 'application/json', 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(url, {
@@ -38,7 +34,6 @@ export async function apiFetch(path, { method = 'GET', body, token } = {}) {
   return data;
 }
 
-// API de conveniencia
 export const api = {
   health: () => apiFetch('/api/health'),
   register: (name, email, password) =>
