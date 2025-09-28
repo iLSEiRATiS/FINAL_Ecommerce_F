@@ -10,9 +10,9 @@ const Carrito = lazy(() => import('../pages/Carrito'));
 const Account = lazy(() => import('../pages/Account'));
 
 const NotFound = () => (
-  <div className="text-center my-5">
+  <div className="text-center my-5" role="alert">
     <h2>Página no encontrada</h2>
-    <p>Verificá la URL o volv&eacute; al inicio.</p>
+    <p>Verificá la URL o volvé al inicio.</p>
   </div>
 );
 
@@ -35,4 +35,3 @@ const AppRouter = () => (
 );
 
 export default AppRouter;
-

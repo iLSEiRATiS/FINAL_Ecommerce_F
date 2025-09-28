@@ -259,3 +259,6 @@ a{color:var(--link)} a:hover{opacity:.9}
   .offcanvas-backdrop.show{ z-index:1190 !important; }
   .mobile-navrow, .mobile-topbar .icon-btn{ position:relative; z-index:1; }
 }
+
+/* sticky footer fallback */
+html, body, #root { height: 100%; }

@@ -15,11 +15,13 @@ import { FaSearch, FaShoppingBag, FaBars } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
 import CarritoOffcanvas from './CarritoOffcanvas';
 import logo from '../assets/logo-coti.png';
+import { useAuth } from '../context/AuthContext'; // NUEVO
 
 const Header = () => {
   const navigate = useNavigate();
   const { getTotalItems } = useCart();
   const cantidad = getTotalItems();
+  const { user, logout } = useAuth();               // NUEVO
 
   // estados comunes
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,6 +36,11 @@ const Header = () => {
     const q = searchTerm.trim();
     if (q) navigate(`/productos?search=${encodeURIComponent(q)}`);
     setShowSearch(false);
+  };
+
+  const handleLogout = () => {                      // NUEVO
+    logout();
+    navigate('/');
   };
 
   return (
@@ -67,8 +74,19 @@ const Header = () => {
             </Form>
 
             <Nav className="align-items-center gap-3">
-              <Nav.Link as={Link} to="/login" className="nav-link-plain">Iniciar sesión</Nav.Link>
-              <Nav.Link as={Link} to="/register" className="nav-link-plain">Registrarse</Nav.Link>
+              {user ? (
+                <>
+                  <span className="text-white">Hola, <strong>{user.name}</strong></span>
+                  <Nav.Link as={Link} to="/account" className="nav-link-plain">Mi cuenta</Nav.Link>
+                  <Button variant="outline-light" size="sm" onClick={handleLogout}>Salir</Button>
+                </>
+              ) : (
+                <>
+                  <Nav.Link as={Link} to="/login" className="nav-link-plain">Iniciar sesión</Nav.Link>
+                  <Nav.Link as={Link} to="/register" className="nav-link-plain">Registrarse</Nav.Link>
+                </>
+              )}
+
               <Button
                 variant="link"
                 className="cart-icon-btn text-white position-relative p-0"
@@ -90,7 +108,7 @@ const Header = () => {
             <img src={logo} alt="CotiStore" />
           </Link>
 
-          {/* Lupa centrada */}
+        {/* Lupa centrada */}
           <button
             className="icon-btn"
             aria-label="Buscar"
@@ -153,12 +171,32 @@ const Header = () => {
             <ListGroup.Item action as={Link} to="/productos" onClick={() => setShowMobileMenu(false)}>
               Tienda
             </ListGroup.Item>
-            <ListGroup.Item action as={Link} to="/login" onClick={() => setShowMobileMenu(false)}>
-              Iniciar sesión
-            </ListGroup.Item>
-            <ListGroup.Item action as={Link} to="/register" onClick={() => setShowMobileMenu(false)}>
-              Registrarse
-            </ListGroup.Item>
+
+            {user ? (
+              <>
+                <ListGroup.Item className="text-muted">
+                  Sesión: <strong>{user.name}</strong>
+                </ListGroup.Item>
+                <ListGroup.Item action as={Link} to="/account" onClick={() => setShowMobileMenu(false)}>
+                  Mi cuenta
+                </ListGroup.Item>
+                <ListGroup.Item
+                  action
+                  onClick={() => { handleLogout(); setShowMobileMenu(false); }}
+                >
+                  Cerrar sesión
+                </ListGroup.Item>
+              </>
+            ) : (
+              <>
+                <ListGroup.Item action as={Link} to="/login" onClick={() => setShowMobileMenu(false)}>
+                  Iniciar sesión
+                </ListGroup.Item>
+                <ListGroup.Item action as={Link} to="/register" onClick={() => setShowMobileMenu(false)}>
+                  Registrarse
+                </ListGroup.Item>
+              </>
+            )}
           </ListGroup>
         </Offcanvas.Body>
       </Offcanvas>

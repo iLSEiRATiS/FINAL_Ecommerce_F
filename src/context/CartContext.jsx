@@ -1,37 +1,86 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 
 const CartContext = createContext();
 export const useCart = () => useContext(CartContext);
+
+const STORAGE_KEY = 'cart';
 
 const safeParse = (str, fallback) => {
   try { return JSON.parse(str); } catch { return fallback; }
 };
 
+// Normaliza el producto para guardar lo mínimo necesario en el carrito
+function normalizeProduct(p) {
+  const id = p?.id ?? p?._id ?? p?.slug ?? String(p?.nombre ?? p?.name ?? Math.random());
+  return {
+    id,
+    nombre: p?.nombre ?? p?.name ?? 'Producto',
+    precio: Number(p?.precio ?? p?.price ?? 0),
+    imagen: p?.imagen ?? p?.images?.[0] ?? p?.image ?? '',
+    categoria: p?.categoria ?? p?.category ?? ''
+  };
+}
+
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState(() => {
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('cart') : null;
+    const saved = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
     return saved ? safeParse(saved, []) : [];
   });
 
+  // Persistencia en localStorage
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cartItems));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cartItems));
+    } catch {}
   }, [cartItems]);
 
-  const addToCart = (item) => {
+  // Mutadores (estables) ----------------------------------------------
+
+  const addToCart = useCallback((product, qty = 1) => {
+    const q = Number(qty) > 0 ? Number(qty) : 1;
+    const n = normalizeProduct(product);
+
     setCartItems(prev => {
-      const exist = prev.find(p => p.id === item.id);
-      if (exist) return prev.map(p => p.id === item.id ? { ...p, cantidad: p.cantidad + 1 } : p);
-      return [...prev, { ...item, cantidad: 1 }];
+      const idx = prev.findIndex(it => it.id === n.id);
+      if (idx === -1) {
+        return [...prev].concat([{ ...n, cantidad: q }]);
+      }
+      const next = [...prev];
+      next[idx] = { ...next[idx], cantidad: next[idx].cantidad + q };
+      return next;
     });
-  };
+  }, []);
 
-  const removeFromCart = (id) => setCartItems(prev => prev.filter(p => p.id !== id));
-  const increaseQuantity = (id) => setCartItems(prev => prev.map(p => p.id === id ? { ...p, cantidad: p.cantidad + 1 } : p));
-  const decreaseQuantity = (id) => setCartItems(prev => prev.map(p => p.id === id ? { ...p, cantidad: p.cantidad - 1 } : p).filter(p => p.cantidad > 0));
-  const clearCart = () => setCartItems([]);
+  const removeFromCart = useCallback((id) => {
+    setCartItems(prev => prev.filter(it => it.id !== id));
+  }, []);
 
-  const getTotalItems = () => cartItems.reduce((a, i) => a + i.cantidad, 0);
-  const getTotalPrice = () => cartItems.reduce((a, i) => a + i.cantidad * (i.precio ?? 0), 0);
+  const increaseQuantity = useCallback((id) => {
+    setCartItems(prev => prev.map(it => it.id === id ? { ...it, cantidad: it.cantidad + 1 } : it));
+  }, []);
+
+  const decreaseQuantity = useCallback((id) => {
+    setCartItems(prev => {
+      const next = prev.map(it => it.id === id ? { ...it, cantidad: it.cantidad - 1 } : it);
+      return next.filter(it => it.cantidad > 0);
+    });
+  }, []);
+
+  const clearCart = useCallback(() => {
+    setCartItems([]);
+  }, []);
+
+  // Selectores (estables) ---------------------------------------------
+
+  const getTotalItems = useCallback(() => {
+    return cartItems.reduce((acc, it) => acc + (Number(it.cantidad) || 0), 0);
+  }, [cartItems]);
+
+  const getTotalPrice = useCallback(() => {
+    return cartItems.reduce((acc, it) => acc + (Number(it.precio) * Number(it.cantidad) || 0), 0);
+  }, [cartItems]);
+
+  // Valor del contexto (memoizado con dependencias correctas) ---------
 
   const value = useMemo(() => ({
     cartItems,
@@ -42,7 +91,16 @@ export const CartProvider = ({ children }) => {
     clearCart,
     getTotalItems,
     getTotalPrice
-  }), [cartItems]);
+  }), [
+    cartItems,
+    addToCart,
+    removeFromCart,
+    increaseQuantity,
+    decreaseQuantity,
+    clearCart,
+    getTotalItems,
+    getTotalPrice
+  ]);
 
   return (
     <CartContext.Provider value={value}>
