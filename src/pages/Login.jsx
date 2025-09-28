@@ -4,14 +4,17 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 
 const API_BASE = process.env.REACT_APP_API_URL || '';
+const IS_DEV = process.env.NODE_ENV === 'development';
 
 const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    setErrorMsg('');
     const form = new FormData(e.currentTarget);
     const email = form.get('email');
     const password = form.get('password');
@@ -33,12 +36,22 @@ const Login = () => {
           return;
         }
       }
-      // Fallback mock
-      login({ email });
-      navigate('/account');
+
+      // Solo permitir login "mock" en desarrollo
+      if (IS_DEV) {
+        login({ email });
+        navigate('/account');
+        return;
+      }
+
+      setErrorMsg('Credenciales inválidas o servidor no disponible.');
     } catch {
-      login({ email });
-      navigate('/account');
+      if (IS_DEV) {
+        login({ email });
+        navigate('/account');
+        return;
+      }
+      setErrorMsg('No se pudo conectar con el servidor.');
     } finally {
       setLoading(false);
     }
@@ -74,6 +87,12 @@ const Login = () => {
                 required
               />
             </Form.Group>
+
+            {errorMsg && (
+              <div className="alert alert-danger py-2" role="alert">
+                {errorMsg}
+              </div>
+            )}
 
             <Button variant="primary" type="submit" className="w-100" disabled={loading} aria-busy={loading}>
               {loading ? 'Entrando…' : 'Entrar'}

@@ -1,3 +1,4 @@
+// frontend/src/components/Header.jsx
 import { useState } from 'react';
 import {
   Navbar,
@@ -15,19 +16,16 @@ import { FaSearch, FaShoppingBag, FaBars } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
 import CarritoOffcanvas from './CarritoOffcanvas';
 import logo from '../assets/logo-coti.png';
-import { useAuth } from '../context/AuthContext'; // NUEVO
+import { useAuth } from '../context/AuthContext';
 
 const Header = () => {
   const navigate = useNavigate();
   const { getTotalItems } = useCart();
   const cantidad = getTotalItems();
-  const { user, logout } = useAuth();               // NUEVO
+  const { user, logout } = useAuth();
 
-  // estados comunes
   const [searchTerm, setSearchTerm] = useState('');
   const [showCart, setShowCart] = useState(false);
-
-  // móvil
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
 
@@ -38,7 +36,7 @@ const Header = () => {
     setShowSearch(false);
   };
 
-  const handleLogout = () => {                      // NUEVO
+  const handleLogout = () => {
     logout();
     navigate('/');
   };
@@ -57,6 +55,9 @@ const Header = () => {
             <Nav className="align-items-center me-4 gap-3">
               <Nav.Link as={Link} to="/" className="nav-link-plain">Inicio</Nav.Link>
               <Nav.Link as={Link} to="/productos" className="nav-link-plain">Productos</Nav.Link>
+              {user?.role === 'admin' && (
+                <Nav.Link as={Link} to="/admin" className="nav-link-plain">Admin</Nav.Link>
+              )}
             </Nav>
 
             <Form className="header-search-form me-4" onSubmit={submitSearch} role="search" aria-label="Buscar productos">
@@ -108,33 +109,18 @@ const Header = () => {
             <img src={logo} alt="CotiStore" />
           </Link>
 
-        {/* Lupa centrada */}
-          <button
-            className="icon-btn"
-            aria-label="Buscar"
-            onClick={() => setShowSearch(true)}
-          >
+          <button className="icon-btn" aria-label="Buscar" onClick={() => setShowSearch(true)}>
             <FaSearch />
           </button>
 
-          {/* Carrito a la derecha */}
-          <button
-            className="icon-btn cart"
-            aria-label="Abrir carrito"
-            onClick={() => setShowCart(true)}
-          >
+          <button className="icon-btn cart" aria-label="Abrir carrito" onClick={() => setShowCart(true)}>
             <FaShoppingBag />
             {cantidad > 0 && <span className="badge cart-badge">{cantidad}</span>}
           </button>
         </div>
 
-        {/* Botón hamburguesa debajo */}
         <div className="mobile-navrow">
-          <button
-            className="hamburger-btn"
-            onClick={() => setShowMobileMenu(true)}
-            aria-label="Abrir menú"
-          >
+          <button className="hamburger-btn" onClick={() => setShowMobileMenu(true)} aria-label="Abrir menú">
             <FaBars />
           </button>
         </div>
@@ -172,6 +158,12 @@ const Header = () => {
               Tienda
             </ListGroup.Item>
 
+            {user?.role === 'admin' && (
+              <ListGroup.Item action as={Link} to="/admin" onClick={() => setShowMobileMenu(false)}>
+                Admin
+              </ListGroup.Item>
+            )}
+
             {user ? (
               <>
                 <ListGroup.Item className="text-muted">
@@ -180,10 +172,7 @@ const Header = () => {
                 <ListGroup.Item action as={Link} to="/account" onClick={() => setShowMobileMenu(false)}>
                   Mi cuenta
                 </ListGroup.Item>
-                <ListGroup.Item
-                  action
-                  onClick={() => { handleLogout(); setShowMobileMenu(false); }}
-                >
+                <ListGroup.Item action onClick={() => { handleLogout(); setShowMobileMenu(false); }}>
                   Cerrar sesión
                 </ListGroup.Item>
               </>
@@ -201,7 +190,7 @@ const Header = () => {
         </Offcanvas.Body>
       </Offcanvas>
 
-      {/* Carrito lateral (ya tenías este componente) */}
+      {/* Carrito lateral */}
       <CarritoOffcanvas show={showCart} handleClose={() => setShowCart(false)} />
     </>
   );

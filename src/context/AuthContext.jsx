@@ -5,6 +5,7 @@ export const useAuth = () => useContext(AuthContext);
 
 const STORAGE_KEY = 'auth_user';
 const TOKEN_KEY = 'auth_token';
+const IS_DEV = process.env.NODE_ENV === 'development';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
@@ -24,7 +25,7 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   const login = (payload) => {
-    // Respuesta real del backend: { token, user: { id, name, email, role } }
+    // Login real desde backend
     if (payload?.token && payload?.user) {
       try { localStorage.setItem(TOKEN_KEY, payload.token); } catch {}
       const u = payload.user;
@@ -34,15 +35,23 @@ export const AuthProvider = ({ children }) => {
         email: u.email || '',
         role: u.role || 'user'
       });
-      return;
+      return true;
     }
-    // Mock actual
-    const email = payload?.email || '';
-    setUser({ name: email.split('@')[0] || 'Usuario', email });
+
+    // Mock solo en desarrollo (corta el "login mágico" en producción)
+    if (IS_DEV && payload?.email) {
+      const email = payload.email;
+      setUser({ name: email.split('@')[0] || 'Usuario', email, role: 'user' });
+      return true;
+    }
+
+    // En producción, si no hay token+user, no hace nada
+    return false;
   };
 
   const register = ({ name, email }) => {
-    setUser({ name: name || email.split('@')[0] || 'Usuario', email });
+    // Mantener conducta actual de registro en front (si tenés backend, usalo ahí)
+    setUser({ name: name || email.split('@')[0] || 'Usuario', email, role: 'user' });
   };
 
   const logout = () => {
