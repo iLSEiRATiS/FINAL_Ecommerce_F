@@ -10,7 +10,9 @@ const Login = lazy(() => import('../pages/Login'));
 const Register = lazy(() => import('../pages/Register'));
 const Carrito = lazy(() => import('../pages/Carrito'));
 const Account = lazy(() => import('../pages/Account'));
-const Admin = lazy(() => import('../pages/Admin')); // NUEVO
+const Admin = lazy(() => import('../pages/Admin'));
+const Orders = lazy(() => import('../pages/Orders'));     // NUEVO
+const Checkout = lazy(() => import('../pages/Checkout')); // NUEVO
 
 const NotFound = () => (
   <div className="text-center my-5" role="alert">
@@ -30,6 +32,7 @@ const AppRouter = () => (
           <Route path="/register" element={<Register />} />
           <Route path="/carrito" element={<Carrito />} />
 
+          {/* Usuario logueado */}
           <Route
             path="/account"
             element={
@@ -38,6 +41,24 @@ const AppRouter = () => (
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/orders"
+            element={
+              <ProtectedRoute>
+                <Orders />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/checkout"
+            element={
+              <ProtectedRoute>
+                <Checkout />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin */}
           <Route
             path="/admin"
             element={

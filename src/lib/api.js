@@ -1,5 +1,4 @@
-// Cliente API único, con "shim" para código viejo que importaba { apiFetch }.
-// Soporta REACT_APP_API_URL y limpia barras finales y un /api colado.
+// Cliente API único + shim apiFetch
 
 const RAW_ENV = (process.env.REACT_APP_API_URL || '').trim();
 const RAW_BASE =
@@ -10,8 +9,8 @@ const RAW_BASE =
 
 function normalizeBase(url) {
   let base = String(url || '').trim();
-  base = base.replace(/\/+$/, '');    // sin barra final
-  base = base.replace(/\/api$/i, ''); // si vino con /api, lo sacamos
+  base = base.replace(/\/+$/, '');
+  base = base.replace(/\/api$/i, '');
   return base;
 }
 
@@ -50,12 +49,18 @@ export const api = {
     login:    (data) => http('/api/auth/login',    { method: 'POST', body: data }),
     me:       (token) => http('/api/auth/me', { token })
   },
+  orders: {
+    create: (token, data) => http('/api/orders', { method: 'POST', token, body: data }),
+    mine:   (token)       => http('/api/orders/mine', { token }),
+    get:    (token, id)   => http(`/api/orders/${encodeURIComponent(id)}`, { token })
+  },
   admin: {
-    listUsers: (token) => http('/api/admin/users', { token })
+    listUsers:  (token)            => http('/api/admin/users', { token }),
+    deleteUser: (token, userId)    => http(`/api/admin/users/${encodeURIComponent(userId)}`, { method: 'DELETE', token }),
+    listOrders: (token)            => http('/api/admin/orders', { token })
   }
 };
 
-// SHIM de compatibilidad: permite `import { apiFetch } from '../lib/api'`
+// compat legado
 export { http as apiFetch };
-
 export default api;
