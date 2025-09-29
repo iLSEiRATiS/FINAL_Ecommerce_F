@@ -51,17 +51,17 @@ export default function Admin() {
   async function handleDeleteUser(id) {
     if (!id) return;
     if (user && (user.id === id || user._id === id)) {
-      alert('No podés borrarte a vos mismo.');
+      window.alert('No podés borrarte a vos mismo.');
       return;
     }
-    if (!confirm('¿Eliminar este usuario y sus pedidos?')) return;
+    // usar window.confirm para evitar el no-restricted-globals
+    if (!window.confirm('¿Eliminar este usuario y sus pedidos?')) return;
     try {
       await api.admin.deleteUser(token, id);
       setUsers(prev => prev.filter(u => (u._id || u.id) !== id));
-      // opcional: también limpiamos pedidos de la vista
       setOrders(prev => prev.filter(o => String(o.user) !== String(id)));
     } catch (e) {
-      alert(e?.message || 'No se pudo eliminar.');
+      window.alert(e?.message || 'No se pudo eliminar.');
     }
   }
 
