@@ -1,46 +1,47 @@
-// frontend/src/pages/Admin.jsx
 import { useEffect, useState } from 'react';
-import { Table, Badge, Alert, Spinner, Card } from 'react-bootstrap';
-import { apiFetch } from '../lib/api';
+import { Card, Table, Alert, Spinner } from 'react-bootstrap';
+import { useAuth } from '../context/AuthContext';
+import api from '../lib/api';
 
-const roleBadge = (role) => {
-  const variant = role === 'admin' ? 'danger' : 'secondary';
-  return <Badge bg={variant}>{role}</Badge>;
-};
-
-const Admin = () => {
-  const [users, setUsers] = useState([]);
+export default function Admin() {
+  const { token, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
+  const [rows, setRows] = useState([]);
 
   useEffect(() => {
     let alive = true;
-    (async () => {
+    async function run() {
+      setErr('');
+      setLoading(true);
       try {
-        const data = await apiFetch('/api/admin/users');
-        if (alive) setUsers(data);
+        if (!token) throw new Error('No hay token');
+        const data = await api.admin.listUsers(token);
+        if (alive) setRows(Array.isArray(data) ? data : []);
       } catch (e) {
-        if (alive) setErr(e.message || 'No se pudo cargar usuarios');
+        if (alive) setErr(e?.message || 'Error al cargar usuarios');
       } finally {
         if (alive) setLoading(false);
       }
-    })();
+    }
+    run();
     return () => { alive = false; };
-  }, []);
+  }, [token]);
+
+  // Guardia por si alguien entra sin ser admin (el router ya bloquea igual)
+  if (user && user.role !== 'admin') {
+    return <Alert variant="warning" className="m-3">Acceso restringido.</Alert>;
+  }
 
   return (
-    <div className="admin-page">
-      <h2 className="mb-3">Administración</h2>
-      <p className="text-muted">Usuarios registrados en la base de datos.</p>
-
-      {err && <Alert variant="danger">{err}</Alert>}
-
+    <div className="container my-4">
       <Card>
+        <Card.Header><strong>Panel de administración</strong></Card.Header>
         <Card.Body>
+          {err && <Alert variant="danger" className="mb-3">{err}</Alert>}
           {loading ? (
-            <div className="d-flex align-items-center">
-              <Spinner animation="border" role="status" size="sm" className="me-2" />
-              Cargando…
+            <div className="text-center py-5">
+              <Spinner animation="border" role="status" />
             </div>
           ) : (
             <Table striped bordered hover responsive>
@@ -53,17 +54,17 @@ const Admin = () => {
                 </tr>
               </thead>
               <tbody>
-                {users.map(u => (
-                  <tr key={u._id}>
-                    <td>{u.name || '—'}</td>
+                {rows.map(u => (
+                  <tr key={u._id || u.id}>
+                    <td>{u.name || '-'}</td>
                     <td>{u.email}</td>
-                    <td>{roleBadge(u.role || 'user')}</td>
-                    <td>{u.createdAt ? new Date(u.createdAt).toLocaleString() : '—'}</td>
+                    <td>{u.role}</td>
+                    <td>{new Date(u.createdAt).toLocaleString()}</td>
                   </tr>
                 ))}
-                {users.length === 0 && (
+                {rows.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="text-center text-muted">Sin usuarios</td>
+                    <td colSpan={4} className="text-center py-3">Sin usuarios.</td>
                   </tr>
                 )}
               </tbody>
@@ -73,6 +74,4 @@ const Admin = () => {
       </Card>
     </div>
   );
-};
-
-export default Admin;
+}
