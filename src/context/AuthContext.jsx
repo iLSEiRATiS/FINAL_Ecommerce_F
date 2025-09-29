@@ -1,69 +1,58 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import api from '../lib/api';
 
-const AuthContext = createContext(null);
-export const useAuth = () => useContext(AuthContext);
+const AuthCtx = createContext(null);
 
-const STORAGE_KEY = 'auth_user';
-const TOKEN_KEY = 'auth_token';
-const IS_DEV = process.env.NODE_ENV === 'development';
-
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
+  const [token, setToken] = useState(() => localStorage.getItem('auth_token') || '');
   const [user, setUser] = useState(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
+    try { return JSON.parse(localStorage.getItem('auth_user') || 'null'); } catch { return null; }
   });
+  const [loading, setLoading] = useState(!!token);
 
   useEffect(() => {
-    try {
-      if (user) localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-      else localStorage.removeItem(STORAGE_KEY);
-    } catch {}
-  }, [user]);
-
-  const login = (payload) => {
-    // Login real desde backend
-    if (payload?.token && payload?.user) {
-      try { localStorage.setItem(TOKEN_KEY, payload.token); } catch {}
-      const u = payload.user;
-      setUser({
-        id: u.id,
-        name: u.name || (u.email?.split('@')[0] ?? 'Usuario'),
-        email: u.email || '',
-        role: u.role || 'user'
-      });
-      return true;
+    let cancelled = false;
+    async function boot() {
+      if (!token) return;
+      try {
+        const { user } = await api.auth.me(token);
+        if (!cancelled) setUser(user);
+      } catch {
+        if (!cancelled) {
+          setToken('');
+          setUser(null);
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('auth_user');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
+    boot();
+    return () => { cancelled = true; };
+  }, [token]);
 
-    // Mock solo en desarrollo (corta el "login mágico" en producción)
-    if (IS_DEV && payload?.email) {
-      const email = payload.email;
-      setUser({ name: email.split('@')[0] || 'Usuario', email, role: 'user' });
-      return true;
+  const value = useMemo(() => ({
+    token, user, loading,
+    login({ token, user }) {
+      setToken(token);
+      setUser(user);
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('auth_user', JSON.stringify(user));
+    },
+    logout() {
+      setToken('');
+      setUser(null);
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
     }
+  }), [token, user, loading]);
 
-    // En producción, si no hay token+user, no hace nada
-    return false;
-  };
+  return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
+}
 
-  const register = ({ name, email }) => {
-    // Mantener conducta actual de registro en front (si tenés backend, usalo ahí)
-    setUser({ name: name || email.split('@')[0] || 'Usuario', email, role: 'user' });
-  };
-
-  const logout = () => {
-    setUser(null);
-    try { localStorage.removeItem(TOKEN_KEY); } catch {}
-  };
-
-  const getToken = () => {
-    try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
-  };
-
-  const value = useMemo(() => ({ user, login, register, logout, getToken }), [user]);
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+export function useAuth() {
+  const ctx = useContext(AuthCtx);
+  if (!ctx) throw new Error('useAuth debe usarse dentro de <AuthProvider>');
+  return ctx;
+}
