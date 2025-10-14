@@ -45,6 +45,7 @@ const Header = () => {
     <>
       {/* DESKTOP */}
       <Navbar expand="md" variant="dark" sticky="top" className="header-navbar d-none d-md-flex">
+<<<<<<< HEAD
         <Container fluid className="align-items-center justify-content-between">
           {/* IZQUIERDA: logo (sin texto) + links Inicio/Productos(/Admin) */}
           <div className="d-flex align-items-center gap-3">
@@ -55,16 +56,30 @@ const Header = () => {
             </Navbar.Brand>
 
             <Nav className="align-items-center gap-3 ms-1">
+=======
+        <Container fluid className="align-items-center">
+          <Navbar.Brand as={Link} to="/" className="brand d-flex align-items-center">
+            <img src={logo} alt="CotiStore" className="brand-logo me-2" />
+            <span className="brand-name">CotiStore</span>
+          </Navbar.Brand>
+
+          <div className="header-right">
+            <Nav className="align-items-center me-4 gap-3">
+>>>>>>> origin/main
               <Nav.Link as={Link} to="/" className="nav-link-plain">Inicio</Nav.Link>
               <Nav.Link as={Link} to="/productos" className="nav-link-plain">Productos</Nav.Link>
               {user?.role === 'admin' && (
                 <Nav.Link as={Link} to="/admin" className="nav-link-plain">Admin</Nav.Link>
               )}
             </Nav>
+<<<<<<< HEAD
           </div>
 
           {/* DERECHA: buscador -> auth -> carrito */}
           <div className="d-flex align-items-center">
+=======
+
+>>>>>>> origin/main
             <Form className="header-search-form me-4" onSubmit={submitSearch} role="search" aria-label="Buscar productos">
               <InputGroup className="header-search">
                 <Form.Control

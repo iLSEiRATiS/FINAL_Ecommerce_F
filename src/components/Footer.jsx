@@ -1,4 +1,5 @@
 // src/components/Footer.jsx
+<<<<<<< HEAD
 import { useEffect, useState } from 'react';
 import { Container, Row, Col } from 'react-bootstrap';
 import { FaInstagram, FaEnvelope, FaPhoneAlt, FaArrowUp } from 'react-icons/fa';
@@ -103,5 +104,16 @@ const Footer = () => {
     </>
   );
 };
+=======
+import { Container } from 'react-bootstrap';
+
+const Footer = () => (
+  <footer className="bg-dark text-white py-3 mt-4" role="contentinfo">
+    <Container className="text-center">
+      © {new Date().getFullYear()} Cotillón
+    </Container>
+  </footer>
+);
+>>>>>>> origin/main
 
 export default Footer;

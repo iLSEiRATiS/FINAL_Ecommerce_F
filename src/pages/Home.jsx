@@ -1,4 +1,5 @@
 // src/pages/Home.jsx
+<<<<<<< HEAD
 import { Container, Row, Col, Carousel, Card, Button } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 
@@ -203,6 +204,13 @@ const Home = () => {
           </Row>
         </Container>
       </section>
+=======
+const Home = () => {
+  return (
+    <main className="text-center mt-5" role="main">
+      <h1>Bienvenido al Cotillón</h1>
+      <p>Explorá nuestros productos para fiestas y eventos.</p>
+>>>>>>> origin/main
     </main>
   );
 };
