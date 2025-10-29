@@ -1,3 +1,4 @@
+// src/pages/Register.jsx
 import { useState } from 'react';
 import { Form, Button, Card, Alert, Spinner } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';

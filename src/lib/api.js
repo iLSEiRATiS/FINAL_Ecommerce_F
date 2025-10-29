@@ -1,16 +1,21 @@
+// src/lib/api.js
 // Cliente API único + shim apiFetch
 
-const RAW_ENV = (process.env.REACT_APP_API_URL || '').trim();
+// Lee variable para Vite o CRA, con fallback correcto a 5000 en dev.
+const RAW_ENV =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) ||
+  process.env.REACT_APP_API_URL ||
+  '';
+
 const RAW_BASE =
-  RAW_ENV ||
-  (process.env.NODE_ENV === 'production'
+  (RAW_ENV || (process.env.NODE_ENV === 'production'
     ? 'https://final-ecommerce-b.onrender.com'
-    : 'http://localhost:4000');
+    : 'http://localhost:5000')).trim();
 
 function normalizeBase(url) {
   let base = String(url || '').trim();
-  base = base.replace(/\/+$/, '');
-  base = base.replace(/\/api$/i, '');
+  base = base.replace(/\/+$/, '');     // quita / final
+  base = base.replace(/\/api$/i, '');  // quita /api si lo pusieron en la env
   return base;
 }
 
@@ -55,9 +60,9 @@ export const api = {
     get:    (token, id)   => http(`/api/orders/${encodeURIComponent(id)}`, { token })
   },
   admin: {
-    listUsers:  (token)            => http('/api/admin/users', { token }),
-    deleteUser: (token, userId)    => http(`/api/admin/users/${encodeURIComponent(userId)}`, { method: 'DELETE', token }),
-    listOrders: (token)            => http('/api/admin/orders', { token })
+    listUsers:  (token)         => http('/api/admin/users', { token }),
+    deleteUser: (token, userId) => http(`/api/admin/users/${encodeURIComponent(userId)}`, { method: 'DELETE', token }),
+    listOrders: (token)         => http('/api/admin/orders', { token })
   }
 };
 
