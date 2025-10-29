@@ -1,59 +1,90 @@
 // src/context/CartContext.jsx
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useMemo, useState } from 'react';
+import { useAuth } from './AuthContext';
 
-const CartContext = createContext(null);
+const CartCtx = createContext(null);
 
-export const CartProvider = ({ children }) => {
+export function CartProvider({ children }) {
+  const { token, loading } = useAuth(); // leemos el estado de sesión
   const [cartItems, setCartItems] = useState(() => {
-    try {
-      const raw = localStorage.getItem('cart:v1');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
+    try { return JSON.parse(localStorage.getItem('cart_items') || '[]'); } catch { return []; }
   });
 
-  useEffect(() => {
-    localStorage.setItem('cart:v1', JSON.stringify(cartItems));
-  }, [cartItems]);
+  const persist = (items) => {
+    setCartItems(items);
+    localStorage.setItem('cart_items', JSON.stringify(items));
+  };
+
+  const findIndex = (id) => cartItems.findIndex(i => String(i.id || i._id) === String(id));
+
+  // ---- Guard de compra: sólo bloquea si NO hay sesión y no estamos cargando Auth
+  const isLoggedIn = !!(token || localStorage.getItem('auth_token'));
+  const canBuy = isLoggedIn && !loading;
 
   const addToCart = (product) => {
-    setCartItems(prev => {
-      const idx = prev.findIndex(it => it.id === product.id);
-      if (idx >= 0) {
-        const copy = [...prev];
-        copy[idx] = { ...copy[idx], cantidad: (copy[idx].cantidad || 1) + 1 };
-        return copy;
-      }
-      return [...prev, { ...product, cantidad: 1 }];
-    });
+    if (!canBuy) {
+      window.alert('Iniciá sesión para ver precios y comprar.');
+      return;
+    }
+    const id = product.id || product._id || `${product.categoria}-${product.nombre}`;
+    const idx = findIndex(id);
+    if (idx >= 0) {
+      const copy = [...cartItems];
+      copy[idx] = { ...copy[idx], cantidad: (copy[idx].cantidad || 1) + 1 };
+      persist(copy);
+    } else {
+      persist([...cartItems, {
+        id,
+        nombre: product.nombre,
+        precio: product.precio ?? 0,
+        imagen: product.imagen || '',
+        cantidad: 1
+      }]);
+    }
   };
 
-  const setQuantity = (id, qty) => {
-    setCartItems(prev => prev.map(it => it.id === id ? { ...it, cantidad: qty } : it));
+  const removeFromCart = (id) => {
+    persist(cartItems.filter(it => String(it.id) !== String(id)));
   };
 
-  const increaseQuantity = (id) => setCartItems(prev => prev.map(it => it.id === id ? { ...it, cantidad: (it.cantidad || 1) + 1 } : it));
-  const decreaseQuantity = (id) => setCartItems(prev => prev.map(it => it.id === id ? { ...it, cantidad: Math.max(1, (it.cantidad || 1) - 1) } : it));
-  const removeFromCart   = (id) => setCartItems(prev => prev.filter(it => it.id !== id));
-  const clearCart        = () => setCartItems([]);
+  const clearCart = () => persist([]);
 
-  const getTotalPrice = () => cartItems.reduce((acc, it) => acc + (it.precio ?? 0) * (it.cantidad || 1), 0);
-  const getTotalItems = () => cartItems.reduce((acc, it) => acc + (it.cantidad || 1), 0);
+  const updateQuantity = (id, cantidad) => {
+    if (!canBuy) {
+      window.alert('Iniciá sesión para ver precios y comprar.');
+      return;
+    }
+    const idx = findIndex(id);
+    if (idx < 0) return;
+    const qty = Math.max(1, Number(cantidad) || 1);
+    const copy = [...cartItems];
+    copy[idx] = { ...copy[idx], cantidad: qty };
+    persist(copy);
+  };
+
+  const getTotalItems = () =>
+    cartItems.reduce((acc, it) => acc + (it.cantidad || 1), 0);
+
+  const getTotalPrice = () =>
+    cartItems.reduce((acc, it) => acc + (it.precio ?? 0) * (it.cantidad || 1), 0);
 
   const value = useMemo(() => ({
     cartItems,
     addToCart,
-    setQuantity,
-    increaseQuantity,
-    decreaseQuantity,
     removeFromCart,
     clearCart,
-    getTotalPrice,
+    updateQuantity,
     getTotalItems,
-  }), [cartItems]);
+    getTotalPrice,
+    // útil si querés condicionar UI en algún componente
+    canBuy,
+  }), [cartItems, canBuy]);
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
-};
+  return <CartCtx.Provider value={value}>{children}</CartCtx.Provider>;
+}
 
-export const useCart = () => useContext(CartContext);
+export function useCart() {
+  const ctx = useContext(CartCtx);
+  if (!ctx) throw new Error('useCart debe usarse dentro de <CartProvider>');
+  return ctx;
+}

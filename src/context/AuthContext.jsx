@@ -6,7 +6,11 @@ const AuthCtx = createContext(null);
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('auth_token') || '');
   const [user, setUser] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('auth_user') || 'null'); } catch { return null; }
+    try {
+      return JSON.parse(localStorage.getItem('auth_user') || 'null');
+    } catch {
+      return null;
+    }
   });
   const [loading, setLoading] = useState(!!token);
 
@@ -29,24 +33,32 @@ export function AuthProvider({ children }) {
       }
     }
     boot();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
-  const value = useMemo(() => ({
-    token, user, loading,
-    login({ token, user }) {
-      setToken(token);
-      setUser(user);
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('auth_user', JSON.stringify(user));
-    },
-    logout() {
-      setToken('');
-      setUser(null);
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
-    }
-  }), [token, user, loading]);
+  const value = useMemo(
+    () => ({
+      token,
+      user,
+      loading,
+      isLoggedIn: !!token && !!user, // ✅ bandera global usada por ProductCard
+      login({ token, user }) {
+        setToken(token);
+        setUser(user);
+        localStorage.setItem('auth_token', token);
+        localStorage.setItem('auth_user', JSON.stringify(user));
+      },
+      logout() {
+        setToken('');
+        setUser(null);
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+      },
+    }),
+    [token, user, loading]
+  );
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }

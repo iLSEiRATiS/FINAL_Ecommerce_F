@@ -1,14 +1,18 @@
-/* src/index.css (sin cambios de fondo) */
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* --- Visibilidad de precios --- */
+.product-card .text-muted.small {
+  color: #6c757d;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+.product-card .text-success {
+  color: #28a745 !important;
+}
+
+.product-card a.text-muted:hover {
+  text-decoration: underline;
+  color: #007bff;
+}
+
+.product-card button[disabled] {
+  opacity: 0.8;
+  cursor: not-allowed;
 }

@@ -1,10 +1,10 @@
-// src/pages/Productos.jsx
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Container, Row, Col, Button, Dropdown, Badge, Pagination, Form
 } from 'react-bootstrap';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import SearchBar from '../components/SearchBar';
 import productosData from '../data/productos.json';
 
@@ -148,6 +148,7 @@ const leafSlugs = (node) => {
 
 export default function Productos() {
   const { addToCart } = useCart();
+  const { isLoggedIn } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -486,7 +487,18 @@ export default function Productos() {
                     <div className="text-muted small mb-2">
                       {(p.subsubcategoria ? `${p.subcategoria} · ${p.subsubcategoria}` : p.subcategoria) || '—'}
                     </div>
-                    <div className="fw-bold mb-3">{money.format(p.precio ?? 0)}</div>
+
+                    {/* --- Visibilidad de precio según sesión --- */}
+                    <div className="fw-bold mb-3">
+                      {isLoggedIn ? (
+                        money.format(p.precio ?? 0)
+                      ) : (
+                        <span className="text-muted small" style={{ fontStyle: 'italic' }}>
+                          Iniciá sesión para ver precio
+                        </span>
+                      )}
+                    </div>
+
                     <Button className="mt-auto" variant="primary" onClick={() => addToCart(p)}>
                       Agregar al carrito
                     </Button>
