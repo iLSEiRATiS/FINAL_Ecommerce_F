@@ -1,8 +1,10 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Form, Button, Card, Alert, Spinner } from 'react-bootstrap';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import api from '../lib/api';
+import { GOOGLE_AUTH_ENABLED } from '../lib/google';
 
 const Login = () => {
   const { login } = useAuth();
@@ -10,6 +12,7 @@ const Login = () => {
   const { search } = useLocation();
 
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const resolveRedirect = (user) => {
@@ -28,7 +31,7 @@ const Login = () => {
     const password = String(form.get('password') || '');
 
     if (!email || !password) {
-      setErrorMsg('Completá email y contraseña.');
+      setErrorMsg('Completa email y contraseña.');
       return;
     }
 
@@ -46,6 +49,58 @@ const Login = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    if (!credentialResponse?.credential) {
+      setErrorMsg('Google no devolvió credenciales.');
+      return;
+    }
+    setGoogleLoading(true);
+    setErrorMsg('');
+    try {
+      const data = await api.auth.google(credentialResponse.credential);
+      if (data?.token && data?.user) {
+        login({ token: data.token, user: data.user });
+        navigate(resolveRedirect(data.user), { replace: true });
+      } else {
+        setErrorMsg('Respuesta inválida del servidor.');
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'No se pudo iniciar sesión con Google.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setErrorMsg('No se pudo conectar con Google.');
+  };
+
+  const renderGoogleButton = () => {
+    if (GOOGLE_AUTH_ENABLED) {
+      return (
+        <>
+          <GoogleLogin
+            width="100%"
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            useOneTap={false}
+          />
+          {googleLoading && <div className="small text-muted mt-2">Conectando con Google...</div>}
+        </>
+      );
+    }
+    return (
+      <>
+        <Button variant="outline-secondary" className="w-100" disabled>
+          Google OAuth no configurado
+        </Button>
+        <div className="small text-muted mt-2">
+          Define REACT_APP_GOOGLE_CLIENT_ID para habilitar este botón.
+        </div>
+      </>
+    );
   };
 
   return (
@@ -72,6 +127,10 @@ const Login = () => {
               ¿No tenés cuenta? <Link to="/register">Registrate</Link>
             </div>
           </Form>
+          <div className="text-center text-muted my-3">o</div>
+          <div className="text-center">
+            {renderGoogleButton()}
+          </div>
         </div>
       </Card>
     </div>

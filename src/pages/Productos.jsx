@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Container, Row, Col, Button, Dropdown, Badge, Pagination, Form
+  Container, Row, Col, Button, Dropdown, Badge, Pagination, Form, Spinner
 } from 'react-bootstrap';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import SearchBar from '../components/SearchBar';
 import productosData from '../data/productos.json';
+import api, { API_BASE } from '../lib/api';
 
 const slugify = (str = '') =>
   str
@@ -166,6 +167,13 @@ export default function Productos() {
   const [per, setPer] = useState([12,24,48].includes(initialPer) ? initialPer : 12);
   const [page, setPage] = useState(initialPage > 0 ? initialPage : 1);
 
+  // Productos desde API (override de datos locales)
+  const [remote, setRemote] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+  const [totalRemote, setTotalRemote] = useState(0);
+  const [pagesRemote, setPagesRemote] = useState(1);
+
   useEffect(() => {
     const params = new URLSearchParams();
     if (search.trim()) params.set('search', search.trim());
@@ -179,6 +187,44 @@ export default function Productos() {
 
   useEffect(() => { setPage(1); }, [search, sortKey, cat, subcat, per]);
 
+  // Carga remota (fuente principal): q + categoría + paginación
+  useEffect(() => {
+    let alive = true;
+    async function run() {
+      setErr(''); setLoading(true);
+      try {
+        const category = (subcat || cat) || undefined;
+        const data = await api.products.list({ q: search.trim() || undefined, category, page, limit: per });
+        const items = Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : []);
+        const mapped = items.map(p => {
+          let img = Array.isArray(p.images) && p.images[0] ? p.images[0] : `https://placehold.co/600x400?text=${encodeURIComponent(p.name || 'Producto')}`;
+          if (typeof img === 'string' && img.startsWith('/')) img = `${API_BASE}${img}`;
+          return {
+            id: p._id || p.slug,
+            nombre: p.name,
+            precio: p.price,
+            imagen: img,
+            categoria: p.category?.name || 'General',
+            categoria_slug: p.category?.slug || (p.category?.name ? slugify(p.category.name) : 'general'),
+            subcategoria: '',
+            subcategoria_slug: ''
+          };
+        });
+        if (alive) {
+          setRemote(mapped);
+          setTotalRemote(Number(data?.total) || mapped.length || 0);
+          setPagesRemote(Number(data?.pages) || Math.max(1, Math.ceil((Number(data?.total) || mapped.length || 0) / per)));
+        }
+      } catch (e) {
+        if (alive) setErr(e?.message || 'No se pudieron cargar productos');
+      } finally {
+        if (alive) setLoading(false);
+      }
+    }
+    run();
+    return () => { alive = false; };
+  }, [search, cat, subcat, page, per]);
+
   useEffect(() => {
     const handler = (e) => {
       const tag = (e.target.tagName || '').toLowerCase();
@@ -190,24 +236,21 @@ export default function Productos() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  const filtered = useMemo(() => {
+  // Fallback local (solo si hay error consultando backend)
+  const localFiltered = useMemo(() => {
     const q = norm(search);
-
     const matchesText = (p) => {
       const fields = [p.nombre, p.categoria, p.subcategoria, p.subsubcategoria]
         .filter(Boolean).map(norm);
       if (!q) return true;
       return fields.some(f => f.includes(q));
     };
-
     const matchesCat = (p) => {
       if (!cat && !subcat) return true;
       const pCat = (p.categoria_slug || slugify(p.categoria || '')).toLowerCase();
       const pSub = (p.subcategoria_slug || slugify(p.subcategoria || p.subsubcategoria || '')).toLowerCase();
-
       if (cat && pCat !== cat) return false;
       if (!subcat) return true;
-
       const node = findBySlug(CATS_TREE, subcat);
       if (node?.children?.length) {
         const leaves = leafSlugs(node);
@@ -215,18 +258,16 @@ export default function Productos() {
       }
       return pSub === subcat;
     };
-
-    return productosData
-      .filter(p => matchesText(p) && matchesCat(p))
-      .sort(SORTERS[sortKey]?.fn ?? SORTERS.relevancia.fn);
+    return productosData.filter(p => matchesText(p) && matchesCat(p)).sort(SORTERS[sortKey]?.fn ?? SORTERS.relevancia.fn);
   }, [search, sortKey, cat, subcat]);
 
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / per));
+  const usingFallback = !!err;
+  const total = usingFallback ? localFiltered.length : totalRemote;
+  const totalPages = usingFallback ? Math.max(1, Math.ceil(total / per)) : pagesRemote;
   const safePage = Math.min(page, totalPages);
   const startIdx = (safePage - 1) * per;
-  const endIdx = Math.min(startIdx + per, total);
-  const paginated = filtered.slice(startIdx, endIdx);
+  const endIdx = usingFallback ? Math.min(startIdx + per, total) : Math.min(startIdx + remote.length, total);
+  const paginated = usingFallback ? localFiltered.slice(startIdx, endIdx) : remote;
 
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
@@ -302,6 +343,7 @@ export default function Productos() {
           </small>
         </Col>
         <Col className="d-flex justify-content-end align-items-center gap-2">
+          {err && <span className="text-danger small me-2">{err}</span>}
           <span className="text-muted small">Ordenar por</span>
           <Dropdown align="end">
             <Dropdown.Toggle size="sm" variant="light">
@@ -413,6 +455,9 @@ export default function Productos() {
 
         <Col lg={9}>
           <div ref={gridTopRef} />
+          {loading && (
+            <div className="text-center py-4"><Spinner animation="border" /></div>
+          )}
           {(() => {
             const chips = [];
             if (cat) {

@@ -23,13 +23,14 @@ export const API_BASE = normalizeBase(RAW_BASE);
 
 async function http(path, { method = 'GET', body, token, headers: extra = {} } = {}) {
   const headers = { Accept: 'application/json', ...extra };
-  if (body != null && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+  const isFormData = (typeof FormData !== 'undefined') && (body instanceof FormData);
+  if (body != null && !isFormData && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers,
-    body: body != null ? JSON.stringify(body) : undefined,
+    body: body != null ? (isFormData ? body : JSON.stringify(body)) : undefined,
     credentials: 'omit'
   });
 
@@ -48,11 +49,29 @@ async function http(path, { method = 'GET', body, token, headers: extra = {} } =
   return payload;
 }
 
+function qs(params = {}) {
+  const entries = Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== '');
+  if (!entries.length) return '';
+  const sp = new URLSearchParams(entries);
+  const s = sp.toString();
+  return s ? `?${s}` : '';
+}
+
 export const api = {
   auth: {
     register: (data) => http('/api/auth/register', { method: 'POST', body: data }),
     login:    (data) => http('/api/auth/login',    { method: 'POST', body: data }),
+    google:   (idToken) => http('/api/auth/google', { method: 'POST', body: { token: idToken } }),
     me:       (token) => http('/api/auth/me', { token })
+  },
+  products: {
+    list: (params) => http(`/api/products${qs(params)}`),
+    get:  (id)     => http(`/api/products/${encodeURIComponent(id)}`)
+  },
+  account: {
+    profile: (token)            => http('/api/account/profile', { token }),
+    updateProfile: (token, d)   => http('/api/account/profile', { method: 'PATCH', token, body: d }),
+    changePassword: (token, d)  => http('/api/account/password', { method: 'PATCH', token, body: d })
   },
   orders: {
     create: (token, data) => http('/api/orders', { method: 'POST', token, body: data }),
@@ -60,12 +79,23 @@ export const api = {
     get:    (token, id)   => http(`/api/orders/${encodeURIComponent(id)}`, { token })
   },
   admin: {
-    listUsers:  (token)         => http('/api/admin/users', { token }),
-    deleteUser: (token, userId) => http(`/api/admin/users/${encodeURIComponent(userId)}`, { method: 'DELETE', token }),
-    listOrders: (token)         => http('/api/admin/orders', { token })
+    listUsers:     (token, params)      => http(`/api/admin/users${qs(params)}`, { token }),
+    createUser:    (token, data)        => http('/api/admin/users', { method: 'POST', token, body: data }),
+    updateUser:    (token, id, d)       => http(`/api/admin/users/${encodeURIComponent(id)}`, { method: 'PATCH', token, body: d }),
+    deleteUser:    (token, userId)      => http(`/api/admin/users/${encodeURIComponent(userId)}`, { method: 'DELETE', token }),
+    listOrders:    (token, params)      => http(`/api/admin/orders${qs(params)}`, { token }),
+    updateOrder:   (token, id, d)       => http(`/api/admin/orders/${encodeURIComponent(id)}`, { method: 'PATCH', token, body: d }),
+    listProducts:  (token, params)      => http(`/api/admin/products${qs(params)}`, { token }),
+    createProduct: (token, d)           => http('/api/admin/products', { method: 'POST', token, body: d }), // soporta JSON o FormData
+    updateProduct: (token, id, d)       => http(`/api/admin/products/${encodeURIComponent(id)}`, { method: 'PATCH', token, body: d }),
+    deleteProduct: (token, id)          => http(`/api/admin/products/${encodeURIComponent(id)}`, { method: 'DELETE', token }),
+    uploadImage:   (token, formData)    => http('/api/admin/upload-image', { method: 'POST', token, body: formData }),
+    overview:      (token)              => http('/api/admin/overview', { token })
   }
 };
 
 // compat legado
 export { http as apiFetch };
 export default api;
+
+

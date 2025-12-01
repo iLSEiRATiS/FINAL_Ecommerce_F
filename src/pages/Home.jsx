@@ -1,6 +1,6 @@
 // src/pages/Home.jsx
 import { Container, Row, Col, Card, Button, Carousel, Badge } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 /** Hero con imágenes libres de Pexels (ejemplos) */
 const heroImages = [
@@ -28,6 +28,7 @@ const featured = [
 ];
 
 const Home = () => {
+  const navigate = useNavigate();
   return (
     <main role="main">
       {/* HERO */}
@@ -114,7 +115,7 @@ const Home = () => {
                 </div>
                 <Card.Body className="d-flex flex-column">
                   <Card.Title className="mb-2 h6">{t.title}</Card.Title>
-                  <Button as={Link} to={t.to} variant="primary" className="mt-auto" size="sm">
+                  <Button onClick={() => navigate(t.to)} variant="primary" className="mt-auto" size="sm">
                     Ver productos
                   </Button>
                 </Card.Body>

@@ -17,6 +17,7 @@ import { useCart } from '../context/CartContext';
 import CarritoOffcanvas from './CarritoOffcanvas';
 import logo from '../assets/logo-coti.png';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE } from '../lib/api';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -77,7 +78,16 @@ const Header = () => {
             <Nav className="align-items-center gap-3">
               {user ? (
                 <>
-                  <span className="text-white">Hola, <strong>{user.name}</strong></span>
+                  <span className="text-white d-flex align-items-center gap-2">
+                    {(() => {
+                      let a = user?.profile?.avatar || '';
+                      if (a && a.startsWith('/')) a = `${API_BASE}${a}`;
+                      return a ? (
+                        <img src={a} alt="avatar" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
+                      ) : null;
+                    })()}
+                    <strong>{user.name}</strong>
+                  </span>
                   <Nav.Link as={Link} to="/account" className="nav-link-plain">Mi cuenta</Nav.Link>
                   <Button variant="outline-light" size="sm" onClick={logout}>Salir</Button>
                 </>
